@@ -1,0 +1,6 @@
+{
+  "name": "EduCore School Management System",
+  "description": "Production-ready Single-School Management System with RBAC, Supabase Auth, and Administrative Portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
