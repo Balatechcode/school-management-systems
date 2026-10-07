@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import { usersService } from './users.service.js';
-import { sendSuccess, sendError } from '../../utils/response.js';
+import { sendSuccess, sendPaginated, sendError } from '../../utils/response.js';
 
 export class UsersController {
   async getMe(req: Request, res: Response) {
@@ -25,12 +25,14 @@ export class UsersController {
 
   async getAllUsers(req: Request, res: Response) {
     try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
       const search = req.query.search as string;
       const status = req.query.status as any;
       const roleCode = req.query.roleCode as string;
 
-      const users = await usersService.getAllUsers({ search, status, roleCode });
-      return sendSuccess(res, users);
+      const { users, total } = await usersService.getAllUsers({ page, limit, search, status, roleCode });
+      return sendPaginated(res, users, { page, limit, total });
     } catch (err: any) {
       return sendError(res, err.message, 'INTERNAL_SERVER_ERROR', 500);
     }

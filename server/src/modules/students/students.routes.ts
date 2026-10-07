@@ -10,9 +10,39 @@ import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { requirePermission } from '../../middleware/rbac.middleware.js';
 
 const router = Router();
-const upload = multer({
+// Security: Strict MIME whitelists to prevent executable or malicious file uploads
+const ALLOWED_PHOTO_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_DOCUMENT_MIMES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+
+const photoUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit for photos
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_PHOTO_MIMES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid image format. Allowed: JPG, PNG, WEBP'));
+    }
+  },
+});
+
+const documentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for documents
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_DOCUMENT_MIMES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid document format. Allowed: PDF, JPG, PNG, WEBP, DOC, DOCX'));
+    }
+  },
 });
 
 // Student Core Endpoints
@@ -45,7 +75,7 @@ router.post(
   '/:id/photo',
   authenticateToken,
   requirePermission('students.update'),
-  upload.single('photo'),
+  photoUpload.single('photo'),
   (req, res) => studentsController.uploadPhoto(req, res)
 );
 
@@ -58,7 +88,7 @@ router.post(
   '/:id/documents',
   authenticateToken,
   requirePermission('documents.create'),
-  upload.single('document'),
+  documentUpload.single('document'),
   (req, res) => studentsController.uploadDocument(req, res)
 );
 

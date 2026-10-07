@@ -81,3 +81,34 @@ export const EnrollmentSchema = z.object({
   status: z.enum(['ACTIVE', 'PROMOTED', 'TRANSFERRED', 'COMPLETED', 'CANCELLED']).optional(),
   promotion_status: z.string().optional().nullable(),
 });
+
+export const AttendanceStatusSchema = z.enum(['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'LEAVE']);
+export const AttendanceEntryModeSchema = z.enum(['MANUAL', 'RFID', 'BIOMETRIC', 'QR_CODE']);
+
+export const MarkBulkAttendanceSchema = z.object({
+  academic_year_id: z.string().min(1, 'Academic year is required'),
+  class_id: z.string().min(1, 'Class is required'),
+  section_id: z.string().min(1, 'Section is required'),
+  attendance_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Valid attendance date (YYYY-MM-DD) required'),
+  records: z.array(
+    z.object({
+      student_id: z.string().min(1, 'Student ID is required'),
+      enrollment_id: z.string().min(1, 'Enrollment ID is required'),
+      status: AttendanceStatusSchema,
+      entry_mode: AttendanceEntryModeSchema.optional().default('MANUAL'),
+      check_in_time: z.string().optional().nullable(),
+      check_out_time: z.string().optional().nullable(),
+      remarks: z.string().optional().nullable(),
+    })
+  ).min(1, 'At least one student record is required'),
+});
+
+export const DeviceTapSchema = z.object({
+  card_number: z.string().optional(),
+  biometric_id: z.string().optional(),
+  device_id: z.string().optional().default('GATE_SCANNER'),
+  direction: z.enum(['IN', 'OUT']).optional().default('IN'),
+  timestamp: z.string().optional(),
+}).refine((data) => Boolean(data.card_number || data.biometric_id), {
+  message: 'Either card_number or biometric_id must be provided',
+});

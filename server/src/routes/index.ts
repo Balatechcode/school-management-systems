@@ -15,6 +15,8 @@ import sectionsRoutes from '../modules/sections/sections.routes.js';
 import studentsRoutes from '../modules/students/students.routes.js';
 import parentsRoutes from '../modules/parents/parents.routes.js';
 import enrollmentsRoutes from '../modules/enrollments/enrollments.routes.js';
+import appVersionRoutes from '../modules/app-version/app-version.routes.js';
+import attendanceRoutes from '../modules/attendance/attendance.routes.js';
 
 const apiRouter = Router();
 
@@ -31,6 +33,12 @@ apiRouter.use('/sections', sectionsRoutes);
 apiRouter.use('/students', studentsRoutes);
 apiRouter.use('/parents', parentsRoutes);
 apiRouter.use('/enrollments', enrollmentsRoutes);
+
+// Part 4 Attendance Module
+apiRouter.use('/attendance', attendanceRoutes);
+
+// Mobile App Management & Force-Update Endpoint
+apiRouter.use('/app', appVersionRoutes);
 
 // Health check endpoint
 apiRouter.get('/health', (_req, res) => {

@@ -10,17 +10,32 @@ import { User, UserStatus } from '../../types/index.js';
 import { Request } from 'express';
 
 export class UsersService {
-  async getAllUsers(options: { search?: string; status?: UserStatus; roleCode?: string } = {}) {
+  async getAllUsers(
+    options: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      status?: UserStatus;
+      roleCode?: string;
+    } = {}
+  ) {
+    const page = Math.max(1, options.page || 1);
+    const limit = Math.min(100, Math.max(1, options.limit || 25));
+    const offset = (page - 1) * limit;
+
     if (isUsingLiveSupabase() && supabaseAdmin) {
       let query = supabaseAdmin
         .from('users')
-        .select(`
+        .select(
+          `
           id, auth_user_id, username, first_name, last_name, phone, profile_image, status, last_login_at, created_at, updated_at, deleted_at,
           user_roles (
             role_id,
             roles (*)
           )
-        `)
+        `,
+          { count: 'exact' }
+        )
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
@@ -29,16 +44,23 @@ export class UsersService {
       }
 
       if (options.search) {
-        query = query.or(`first_name.ilike.%${options.search}%,last_name.ilike.%${options.search}%,username.ilike.%${options.search}%`);
+        query = query.or(
+          `first_name.ilike.%${options.search}%,last_name.ilike.%${options.search}%,username.ilike.%${options.search}%`
+        );
       }
 
-      const { data, error } = await query;
+      const { data, count, error } = await query.range(offset, offset + limit - 1);
       if (error) throw new Error(error.message);
 
-      return (data || []).map((u: any) => ({
+      const users = (data || []).map((u: any) => ({
         ...u,
         roles: (u.user_roles || []).map((ur: any) => ur.roles).filter(Boolean),
       }));
+
+      return {
+        users,
+        total: count ?? users.length,
+      };
     }
 
     // Local Memory DB
@@ -59,13 +81,21 @@ export class UsersService {
       );
     }
 
-    return result.map((u) => {
+    const total = result.length;
+    const paged = result.slice(offset, offset + limit);
+
+    const users = paged.map((u) => {
       const roles = memoryDb.roles.filter((r) => u.role_ids.includes(r.id));
       return {
         ...u,
         roles,
       };
     });
+
+    return {
+      users,
+      total,
+    };
   }
 
   async getUserById(id: string) {

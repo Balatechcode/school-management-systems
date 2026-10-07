@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth.js';
 import { api } from '../../lib/api.js';
-import { User, Role, RoleCode } from '../../types/index.js';
+import { User, Role, RoleCode, PaginatedResponse } from '../../types/index.js';
 import { Table, Column } from '../../components/common/Table.js';
 import { Button } from '../../components/common/Button.js';
 import { Input } from '../../components/common/Input.js';
@@ -37,6 +37,12 @@ export const UsersManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  // Server-side pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -63,9 +69,19 @@ export const UsersManagement: React.FC = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const res = await api.get<(User & { roles?: Role[] })[]>('/api/users');
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', String(limit));
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+      if (statusFilter !== 'ALL') params.set('status', statusFilter);
+
+      const res = await api.get<PaginatedResponse<User & { roles?: Role[] }>>(`/api/users?${params.toString()}`);
       if (res.success && res.data) {
-        setUsers(res.data);
+        setUsers(res.data.data || []);
+        if (res.data.pagination) {
+          setTotalCount(res.data.pagination.total);
+          setTotalPages(res.data.pagination.totalPages || res.data.pagination.total_pages || 1);
+        }
       }
     } catch (e: any) {
       toastError('Failed to fetch users list');
@@ -86,9 +102,15 @@ export const UsersManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
     fetchRoles();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchUsers();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter, page, limit]);
 
   const handleOpenCreate = () => {
     setFormData({
@@ -171,15 +193,6 @@ export const UsersManagement: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (u.phone && u.phone.includes(searchTerm));
-    const matchesStatus = statusFilter === 'ALL' || u.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
   const columns: Column<User & { roles?: Role[] }>[] = [
     {
@@ -332,13 +345,24 @@ export const UsersManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Users Table */}
+      {/* Users Table with Server-Side Pagination */}
       <Table
         columns={columns}
-        data={filteredUsers}
+        data={users}
         keyExtractor={(u) => u.id}
         isLoading={isLoading}
         emptyMessage="No school users match your filter criteria."
+        pagination={{
+          page,
+          limit,
+          total: totalCount,
+          totalPages,
+          onPageChange: (newPage) => setPage(newPage),
+          onLimitChange: (newLimit) => {
+            setLimit(newLimit);
+            setPage(1);
+          },
+        }}
       />
 
       {/* Create User Modal */}

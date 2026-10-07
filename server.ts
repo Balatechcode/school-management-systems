@@ -7,6 +7,8 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import apiRouter from './server/src/routes/index.js';
 import { errorHandler } from './server/src/middleware/error.middleware.js';
 import { ENV } from './server/src/config/env.js';
@@ -17,11 +19,73 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
 
-  // Basic Middleware
-  app.use(cors());
-  app.use(express.json());
+  // Security Headers (CSP relaxed in dev for Vite HMR)
+  app.use(
+    helmet({
+      contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+      crossOriginEmbedderPolicy: false,
+    })
+  );
 
-  // Mount API REST Routes
+  // Restricted CORS configuration (allows mobile apps without Origin, dev localhost, and configured APP_URL)
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    ...(process.env.APP_URL ? [process.env.APP_URL] : []),
+  ];
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+          return callback(null, true);
+        }
+        return callback(new Error('Blocked by CORS policy'));
+      },
+      credentials: true,
+    })
+  );
+
+  // Body parser with size limit to prevent memory exhaustion attacks
+  app.use(express.json({ limit: '5mb' }));
+
+  // General API Rate Limiting (300 requests per 15 mins per IP)
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message: 'Too many requests, please try again later.',
+      code: 'RATE_LIMIT_EXCEEDED',
+    },
+  });
+
+  // Strict Auth Rate Limiting (30 attempts per 15 mins per IP to stop brute-force attacks)
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message: 'Too many authentication attempts. Please try again after 15 minutes.',
+      code: 'AUTH_RATE_LIMIT_EXCEEDED',
+    },
+  });
+
+  app.use('/api', apiLimiter);
+  app.use('/api/v1', apiLimiter);
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/v1/auth/login', authLimiter);
+  app.use('/api/auth/initial-admin', authLimiter);
+  app.use('/api/v1/auth/initial-admin', authLimiter);
+  app.use('/api/auth/demo-login', authLimiter);
+  app.use('/api/v1/auth/demo-login', authLimiter);
+
+  // Mount API REST Routes: /api/v1 (standard for mobile apps) and /api (backwards-compatible)
+  app.use('/api/v1', apiRouter);
   app.use('/api', apiRouter);
 
   // Serve database schema SQL for copy-paste setup in UI
@@ -31,6 +95,7 @@ async function startServer() {
 
   // Global Error Handler for API
   app.use('/api', errorHandler);
+  app.use('/api/v1', errorHandler);
 
   // Frontend integration: Vite middleware in development, static files in production
   if (process.env.NODE_ENV === 'production') {
@@ -65,6 +130,16 @@ async function startServer() {
     `);
   });
 }
+
+// Resilient Monolith Process Protection:
+// Prevent unhandled promise rejections or rogue exceptions in any module from crashing the entire server process.
+process.on('unhandledRejection', (reason) => {
+  console.error('🛡️ [Monolith Resilience Guard] Caught Unhandled Promise Rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('🛡️ [Monolith Resilience Guard] Caught Uncaught Exception:', err);
+});
 
 startServer().catch((err) => {
   console.error('Fatal Server Boot Error:', err);

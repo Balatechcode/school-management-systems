@@ -37,12 +37,23 @@ export class AuthController {
 
   async syncProfile(req: Request, res: Response) {
     try {
-      const { authUserId, email, metadata } = req.body;
-      if (!authUserId || !email) {
-        return sendError(res, 'Missing authUserId or email', 'BAD_REQUEST', 400);
+      // SECURITY: identity comes from the verified token, never from the request body.
+      // Body-supplied authUserId / role would let a user act as someone else or self-assign roles.
+      if (!req.user) {
+        return sendError(res, 'User not authenticated', 'UNAUTHORIZED', 401);
       }
 
-      const user = await authService.syncUserProfile(authUserId, email, metadata);
+      const authUserId = req.user.auth_user_id;
+      const email = req.user.email;
+      if (!authUserId || !email) {
+        // Demo/in-memory users have no Supabase auth identity; nothing to sync.
+        return sendSuccess(res, req.user, 'User profile synchronized');
+      }
+
+      // Strip any client-supplied role so it can never grant privileges.
+      const { role: _ignoredRole, ...safeMetadata } = (req.body?.metadata ?? {}) as Record<string, any>;
+
+      const user = await authService.syncUserProfile(authUserId, email, safeMetadata);
       return sendSuccess(res, user, 'User profile synchronized');
     } catch (err: any) {
       return sendError(res, err.message, 'SYNC_ERROR', 400);
@@ -92,6 +103,11 @@ export class AuthController {
 
   async demoLogin(req: Request, res: Response) {
     try {
+      // SECURITY: demo login only exists for local in-memory demo mode.
+      if (isUsingLiveSupabase() || ENV.NODE_ENV === 'production') {
+        return sendError(res, 'Demo login is disabled', 'FORBIDDEN', 403);
+      }
+
       const { username } = req.body;
       const targetUser = memoryDb.users.find((u) => u.username === username);
 

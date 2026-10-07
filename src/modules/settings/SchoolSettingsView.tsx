@@ -176,6 +176,54 @@ export const SchoolSettingsView: React.FC = () => {
           </div>
         </div>
 
+        {/* School Operating Hours & Attendance Timings */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-indigo-600" />
+              School Operating Hours &amp; Attendance Timings
+            </h3>
+            <span className="text-[11px] text-slate-400 font-medium">Used by RFID turnstiles &amp; daily registers</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input
+              label="School Start Time"
+              type="time"
+              disabled={!canEdit}
+              value={formData.school_start_time || '08:00'}
+              onChange={(e) => setFormData({ ...formData, school_start_time: e.target.value })}
+              helperText="Morning bell / gates open"
+            />
+            <Input
+              label="Late Arrival Cutoff Time"
+              type="time"
+              disabled={!canEdit}
+              value={formData.late_cutoff_time || '08:30'}
+              onChange={(e) => setFormData({ ...formData, late_cutoff_time: e.target.value })}
+              helperText="Taps past this time marked LATE"
+            />
+            <Input
+              label="Half-Day Cutoff Time"
+              type="time"
+              disabled={!canEdit}
+              value={formData.half_day_cutoff_time || '11:30'}
+              onChange={(e) => setFormData({ ...formData, half_day_cutoff_time: e.target.value })}
+              helperText="Taps past this time marked HALF_DAY"
+            />
+          </div>
+
+          <div className="pt-2">
+            <Input
+              label="Hardware Device API Secret Key (IoT Gate Readers)"
+              disabled={!canEdit}
+              value={formData.device_api_key || ''}
+              onChange={(e) => setFormData({ ...formData, device_api_key: e.target.value })}
+              helperText="Shared secret sent in 'x-device-api-key' header by physical RFID turnstiles and biometric scanners"
+            />
+          </div>
+        </div>
+
         {/* Contact & Location Details */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 pb-2 border-b border-slate-100 flex items-center gap-2">

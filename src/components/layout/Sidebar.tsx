@@ -111,8 +111,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'attendance' as NavTab,
       label: 'Attendance',
       icon: CalendarCheck,
-      activeInPart1: false,
-      badge: 'Part 6',
+      activeInPart1: true,
+      permission: 'attendance.read',
     },
     {
       id: 'homework' as NavTab,

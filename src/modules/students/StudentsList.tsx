@@ -420,42 +420,25 @@ export const StudentsList: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table with Integrated Pagination & View At selector */}
       <Table
         columns={columns}
         data={students}
         keyExtractor={(s) => s.id}
         isLoading={isLoading}
         emptyMessage="No students match the criteria."
+        pagination={{
+          page: currentPage,
+          limit,
+          total: totalCount,
+          totalPages,
+          onPageChange: setCurrentPage,
+          onLimitChange: (newLimit) => {
+            setLimit(newLimit);
+            setCurrentPage(1);
+          },
+        }}
       />
-
-      {/* Pagination Controls */}
-      <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between text-xs text-slate-600">
-        <div>
-          Showing {students.length} of {totalCount} students • Page {currentPage} of {totalPages}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={currentPage <= 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
-          >
-            Previous
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={currentPage >= totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}
-            rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
 
       {/* Add Student Modal */}
       <AddStudentModal

@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { History, Shield, RefreshCw, Terminal, Search } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth.js';
 import { api } from '../../lib/api.js';
-import { AuditLog } from '../../types/index.js';
+import { AuditLog, PaginatedResponse } from '../../types/index.js';
 import { Table, Column } from '../../components/common/Table.js';
 import { Badge } from '../../components/common/Badge.js';
 import { Button } from '../../components/common/Button.js';
@@ -20,12 +20,27 @@ export const AuditLogsView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
+  // Server-side pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
-      const res = await api.get<AuditLog[]>('/api/audit-logs');
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', String(limit));
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+
+      const res = await api.get<PaginatedResponse<AuditLog>>(`/api/audit-logs?${params.toString()}`);
       if (res.success && res.data) {
-        setLogs(res.data);
+        setLogs(res.data.data || []);
+        if (res.data.pagination) {
+          setTotalCount(res.data.pagination.total);
+          setTotalPages(res.data.pagination.totalPages || res.data.pagination.total_pages || 1);
+        }
       }
     } catch (e) {
       console.warn('Failed to fetch audit logs:', e);
@@ -35,18 +50,11 @@ export const AuditLogsView: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchLogs();
-  }, []);
-
-  const filteredLogs = logs.filter((log) => {
-    const q = searchTerm.toLowerCase();
-    return (
-      log.action.toLowerCase().includes(q) ||
-      log.entity_type.toLowerCase().includes(q) ||
-      (log.username && log.username.toLowerCase().includes(q)) ||
-      (log.ip_address && log.ip_address.includes(q))
-    );
-  });
+    const timer = setTimeout(() => {
+      fetchLogs();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, page, limit]);
 
   const columns: Column<AuditLog>[] = [
     {
@@ -151,13 +159,24 @@ export const AuditLogsView: React.FC = () => {
         />
       </div>
 
-      {/* Logs Table */}
+      {/* Logs Table with Server-Side Pagination */}
       <Table
         columns={columns}
-        data={filteredLogs}
+        data={logs}
         keyExtractor={(l) => l.id}
         isLoading={isLoading}
         emptyMessage="No audit logs recorded yet."
+        pagination={{
+          page,
+          limit,
+          total: totalCount,
+          totalPages,
+          onPageChange: (newPage) => setPage(newPage),
+          onLimitChange: (newLimit) => {
+            setLimit(newLimit);
+            setPage(1);
+          },
+        }}
       />
 
       {/* Inspect JSON Details Modal */}

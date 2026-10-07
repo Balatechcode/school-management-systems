@@ -25,7 +25,18 @@ export const ENV = {
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     '',
   
-  JWT_SECRET: process.env.JWT_SECRET || 'single-school-sys-secret-jwt-key-change-in-prod-32-chars',
+  JWT_SECRET: (() => {
+    const secret = process.env.JWT_SECRET || '';
+    if (process.env.NODE_ENV === 'production') {
+      if (!secret || secret.length < 32 || secret.includes('change-in-prod')) {
+        throw new Error(
+          'FATAL SECURITY: In production, JWT_SECRET must be explicitly set to a random string of at least 32 characters in .env'
+        );
+      }
+      return secret;
+    }
+    return secret || 'single-school-sys-secret-jwt-key-change-in-prod-32-chars';
+  })(),
 
   // Cloudinary Storage Configuration
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',

@@ -76,6 +76,11 @@ export interface SchoolSettings {
   academic_session: string;
   currency: string;
   timezone: string;
+  school_start_time?: string | null;
+  school_end_time?: string | null;
+  late_cutoff_time?: string | null;
+  half_day_cutoff_time?: string | null;
+  device_api_key?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -174,6 +179,8 @@ export interface Student {
   pincode?: string | null;
   admission_date?: string | null;
   status: StudentStatus;
+  rfid_card_number?: string | null;
+  biometric_id?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -251,7 +258,126 @@ export interface PaginatedResponse<T> {
     page: number;
     limit: number;
     total: number;
-    totalPages: number;
+    total_pages: number;
+    totalPages: number; // alias for web frontend compatibility
+    has_next: boolean;
+    has_prev: boolean;
   };
+}
+
+export type MobilePlatform = 'android' | 'ios';
+
+export interface MobileAppVersion {
+  id: string;
+  platform: MobilePlatform;
+  min_supported_version: string;
+  latest_version: string;
+  min_build_number: number;
+  latest_build_number: number;
+  force_update_title: string;
+  force_update_message: string;
+  optional_update_title: string;
+  optional_update_message: string;
+  store_url: string;
+  maintenance_mode: boolean;
+  maintenance_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CheckUpdateQuery {
+  platform: MobilePlatform;
+  current_version?: string;
+  build_number?: number;
+}
+
+export interface CheckUpdateResponse {
+  platform: MobilePlatform;
+  current_version: string;
+  current_build_number: number;
+  latest_version: string;
+  min_supported_version: string;
+  force_update: boolean;
+  optional_update: boolean;
+  title: string | null;
+  message: string | null;
+  store_url: string;
+  maintenance_mode: boolean;
+  maintenance_message: string | null;
+}
+
+// Attendance Types (Part 4)
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'HALF_DAY' | 'LEAVE';
+export type AttendanceEntryMode = 'MANUAL' | 'RFID' | 'BIOMETRIC' | 'QR_CODE';
+
+export interface AttendanceRecord {
+  id: string;
+  student_id: string;
+  enrollment_id: string;
+  attendance_date: string;
+  status: AttendanceStatus;
+  entry_mode: AttendanceEntryMode;
+  check_in_time?: string | null;
+  check_out_time?: string | null;
+  device_id?: string | null;
+  remarks?: string | null;
+  marked_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  student?: Student;
+}
+
+export interface ClassAttendanceRosterItem {
+  student_id: string;
+  enrollment_id: string;
+  roll_number: string;
+  admission_number: string;
+  first_name: string;
+  last_name: string;
+  photo_url?: string | null;
+  gender?: string | null;
+  rfid_card_number?: string | null;
+  biometric_id?: string | null;
+  status: AttendanceStatus;
+  entry_mode: AttendanceEntryMode;
+  check_in_time?: string | null;
+  check_out_time?: string | null;
+  remarks?: string | null;
+  attendance_id?: string | null;
+}
+
+export interface AttendanceDailyStats {
+  date: string;
+  total_students: number;
+  present: number;
+  absent: number;
+  late: number;
+  half_day: number;
+  leave: number;
+  percentage: number;
+}
+
+export interface DeviceTapPayload {
+  card_number?: string;
+  biometric_id?: string;
+  device_id?: string;
+  direction?: 'IN' | 'OUT';
+  timestamp?: string;
+}
+
+export interface MarkBulkAttendancePayload {
+  academic_year_id: string;
+  class_id: string;
+  section_id: string;
+  attendance_date: string;
+  records: Array<{
+    student_id: string;
+    enrollment_id: string;
+    status: AttendanceStatus;
+    entry_mode?: AttendanceEntryMode;
+    check_in_time?: string | null;
+    check_out_time?: string | null;
+    remarks?: string | null;
+  }>;
 }
 

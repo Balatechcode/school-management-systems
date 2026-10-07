@@ -114,6 +114,7 @@ export class StudentsService {
         }
 
         const total = count || studentsFormatted.length;
+        const total_pages = Math.ceil(total / limit) || 1;
 
         return {
           data: studentsFormatted,
@@ -121,7 +122,10 @@ export class StudentsService {
             page,
             limit,
             total,
-            totalPages: Math.ceil(total / limit) || 1,
+            total_pages,
+            totalPages: total_pages,
+            has_next: page < total_pages,
+            has_prev: page > 1,
           },
         };
       }
@@ -186,6 +190,7 @@ export class StudentsService {
 
     const total = enriched.length;
     const paginated = enriched.slice(offset, offset + limit);
+    const total_pages = Math.ceil(total / limit) || 1;
 
     return {
       data: paginated,
@@ -193,7 +198,10 @@ export class StudentsService {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit) || 1,
+        total_pages,
+        totalPages: total_pages,
+        has_next: page < total_pages,
+        has_prev: page > 1,
       },
     };
   }

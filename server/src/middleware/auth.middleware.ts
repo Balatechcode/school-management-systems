@@ -8,6 +8,7 @@ import { supabaseAdmin } from '../config/supabase.js';
 import { isUsingLiveSupabase, memoryDb } from '../db/store.js';
 import { sendError } from '../utils/response.js';
 import { AuthUserProfile } from '../types/index.js';
+import { ENV } from '../config/env.js';
 
 // Extend Express Request interface to include authenticated user
 declare global {
@@ -31,6 +32,13 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
     }
 
     const isDemoToken = token.startsWith('demo-');
+
+    // SECURITY: demo / in-memory tokens are only valid in local demo mode.
+    // They must never authenticate when live Supabase is configured or in production.
+    const demoAuthAllowed = !isUsingLiveSupabase() && ENV.NODE_ENV !== 'production';
+    if (isDemoToken && !demoAuthAllowed) {
+      return sendError(res, 'Invalid or expired authentication session', 'UNAUTHORIZED', 401);
+    }
 
     // Live Supabase Authentication Flow (for real Supabase JWT tokens)
     if (!isDemoToken && isUsingLiveSupabase() && supabaseAdmin) {
@@ -102,23 +110,20 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
       return next();
     }
 
-    // Local / Demo Store Fallback Flow
-    // Supports demo token format (e.g. "demo-admin-token", "demo-principal-token", or user-id)
+    // Local / Demo Store Fallback Flow (local development only)
+    if (!demoAuthAllowed) {
+      return sendError(res, 'Invalid or expired authentication session', 'UNAUTHORIZED', 401);
+    }
+
+    // Supports demo token format (e.g. "demo-admin-token", "demo-principal-token") or exact user id
     let foundUser = memoryDb.users.find(
-      (u) =>
-        u.id === token ||
-        token.includes(u.username) ||
-        (u.auth_user_id && token.includes(u.auth_user_id))
+      (u) => u.id === token || `demo-${u.username}-token` === token
     );
 
-    // If generic demo token, fallback to admin
+    // Generic demo tokens map to fixed demo users
     if (!foundUser) {
-      if (token === 'demo-token' || token === 'demo-admin-token') {
+      if (token === 'demo-token') {
         foundUser = memoryDb.users.find((u) => u.username === 'admin');
-      } else if (token === 'demo-principal-token') {
-        foundUser = memoryDb.users.find((u) => u.username === 'principal');
-      } else if (token === 'demo-teacher-token') {
-        foundUser = memoryDb.users.find((u) => u.username === 'teacher');
       }
     }
 

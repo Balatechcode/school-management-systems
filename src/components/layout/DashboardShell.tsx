@@ -13,12 +13,14 @@ import { SchoolSettingsView } from '../../modules/settings/SchoolSettingsView.js
 import { AuditLogsView } from '../../modules/audit/AuditLogsView.js';
 import { StudentsList } from '../../modules/students/StudentsList.js';
 import { AcademicsManagement } from '../../modules/academics/AcademicsManagement.js';
+import { AttendanceManagement } from '../../modules/attendance/AttendanceManagement.js';
 import { SupabaseSetupGuideModal } from '../../modules/setup/SupabaseSetupGuideModal.js';
 import { UserProfileModal } from '../../modules/users/UserProfileModal.js';
 import { InitialAdminSetup } from '../../modules/auth/InitialAdminSetup.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { Construction, Sparkles } from 'lucide-react';
 import { Button } from '../common/Button.js';
+import { ErrorBoundary } from '../common/ErrorBoundary.js';
 
 export const DashboardShell: React.FC = () => {
   const { user, isSupabaseConfigured } = useAuth();
@@ -49,6 +51,8 @@ export const DashboardShell: React.FC = () => {
         return <StudentsList />;
       case 'academics':
         return <AcademicsManagement />;
+      case 'attendance':
+        return <AttendanceManagement />;
       default:
         // Future Module Placeholder
         return (
@@ -110,7 +114,13 @@ export const DashboardShell: React.FC = () => {
         )}
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {renderModuleContent()}
+          <ErrorBoundary
+            key={currentTab}
+            fallbackTitle={`Error loading ${currentTab} module`}
+            fallbackMessage="This module encountered an unexpected runtime issue. Other school modules remain fully operational."
+          >
+            {renderModuleContent()}
+          </ErrorBoundary>
         </main>
       </div>
 

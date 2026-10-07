@@ -17,6 +17,8 @@ import {
   StudentParentRelationship,
   StudentEnrollment,
   StudentDocument,
+  MobileAppVersion,
+  AttendanceRecord,
 } from '../types/index.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { ENV } from '../config/env.js';
@@ -132,6 +134,11 @@ export const INITIAL_SCHOOL_SETTINGS: SchoolSettings = {
   academic_session: '2026-2027',
   currency: 'USD',
   timezone: 'America/Los_Angeles',
+  school_start_time: '08:00',
+  school_end_time: '14:30',
+  late_cutoff_time: '08:30',
+  half_day_cutoff_time: '11:30',
+  device_api_key: 'educore-hw-key-2026',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -152,12 +159,52 @@ class MemoryDatabase {
   studentParents: StudentParentRelationship[] = [];
   studentEnrollments: StudentEnrollment[] = [];
   studentDocuments: StudentDocument[] = [];
+  mobileAppVersions: MobileAppVersion[] = [];
+  attendance: AttendanceRecord[] = [];
 
   constructor() {
     this.seedDefaultData();
   }
 
   seedDefaultData() {
+    // Mobile App Versions Seed
+    this.mobileAppVersions = [
+      {
+        id: 'mav-android',
+        platform: 'android',
+        min_supported_version: '1.0.0',
+        latest_version: '1.0.0',
+        min_build_number: 1,
+        latest_build_number: 1,
+        force_update_title: 'Update Required',
+        force_update_message: 'A new version of the school application is required to continue. Please update to access the latest features and security updates.',
+        optional_update_title: 'New Version Available',
+        optional_update_message: 'A new update is available with improvements and new features.',
+        store_url: 'https://play.google.com/store/apps/details?id=com.educore.school',
+        maintenance_mode: false,
+        maintenance_message: 'The system is currently undergoing scheduled maintenance. Please check back shortly.',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'mav-ios',
+        platform: 'ios',
+        min_supported_version: '1.0.0',
+        latest_version: '1.0.0',
+        min_build_number: 1,
+        latest_build_number: 1,
+        force_update_title: 'Update Required',
+        force_update_message: 'A new version of the school application is required to continue. Please update to access the latest features and security updates.',
+        optional_update_title: 'New Version Available',
+        optional_update_message: 'A new update is available with improvements and new features.',
+        store_url: 'https://apps.apple.com/app/id000000000',
+        maintenance_mode: false,
+        maintenance_message: 'The system is currently undergoing scheduled maintenance. Please check back shortly.',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
+
     // Academic Years Seed
     this.academicYears = [
       {
