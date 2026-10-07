@@ -75,12 +75,22 @@ export const UsersManagement: React.FC = () => {
       if (searchTerm.trim()) params.set('search', searchTerm.trim());
       if (statusFilter !== 'ALL') params.set('status', statusFilter);
 
-      const res = await api.get<PaginatedResponse<User & { roles?: Role[] }>>(`/api/users?${params.toString()}`);
+      const res = await api.get<any>(`/api/users?${params.toString()}`);
       if (res.success && res.data) {
-        setUsers(res.data.data || []);
-        if (res.data.pagination) {
-          setTotalCount(res.data.pagination.total);
-          setTotalPages(res.data.pagination.totalPages || res.data.pagination.total_pages || 1);
+        const userList: (User & { roles?: Role[] })[] = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data.data)
+          ? res.data.data
+          : [];
+        setUsers(userList);
+
+        const pagination = res.pagination || res.data?.pagination;
+        if (pagination) {
+          setTotalCount(pagination.total ?? userList.length);
+          setTotalPages(pagination.totalPages || pagination.total_pages || 1);
+        } else {
+          setTotalCount(userList.length);
+          setTotalPages(1);
         }
       }
     } catch (e: any) {

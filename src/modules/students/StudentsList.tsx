@@ -95,12 +95,23 @@ export const StudentsList: React.FC = () => {
       if (sectionFilter) params.set('sectionId', sectionFilter);
       if (yearFilter) params.set('academicYearId', yearFilter);
 
-      const res = await api.get<PaginatedResponse<StudentWithDetails>>(`/api/students?${params.toString()}`);
+      const res = await api.get<any>(`/api/students?${params.toString()}`);
 
       if (res.success && res.data) {
-        setStudents(res.data.data || []);
-        setTotalCount(res.data.pagination.total);
-        setTotalPages(res.data.pagination.totalPages);
+        const studentList: StudentWithDetails[] = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data.data)
+          ? res.data.data
+          : [];
+        setStudents(studentList);
+        const pagination = res.pagination || res.data?.pagination;
+        if (pagination) {
+          setTotalCount(pagination.total ?? studentList.length);
+          setTotalPages(pagination.totalPages || pagination.total_pages || 1);
+        } else {
+          setTotalCount(studentList.length);
+          setTotalPages(1);
+        }
       }
     } catch (e: any) {
       toastError('Failed to load students directory');

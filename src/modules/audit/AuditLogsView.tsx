@@ -34,12 +34,21 @@ export const AuditLogsView: React.FC = () => {
       params.set('limit', String(limit));
       if (searchTerm.trim()) params.set('search', searchTerm.trim());
 
-      const res = await api.get<PaginatedResponse<AuditLog>>(`/api/audit-logs?${params.toString()}`);
+      const res = await api.get<any>(`/api/audit-logs?${params.toString()}`);
       if (res.success && res.data) {
-        setLogs(res.data.data || []);
-        if (res.data.pagination) {
-          setTotalCount(res.data.pagination.total);
-          setTotalPages(res.data.pagination.totalPages || res.data.pagination.total_pages || 1);
+        const logList: AuditLog[] = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data.data)
+          ? res.data.data
+          : [];
+        setLogs(logList);
+        const pagination = res.pagination || res.data?.pagination;
+        if (pagination) {
+          setTotalCount(pagination.total ?? logList.length);
+          setTotalPages(pagination.totalPages || pagination.total_pages || 1);
+        } else {
+          setTotalCount(logList.length);
+          setTotalPages(1);
         }
       }
     } catch (e) {

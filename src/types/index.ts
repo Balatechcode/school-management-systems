@@ -104,9 +104,20 @@ export interface AuthUserProfile extends User {
   permissions: string[]; // e.g., ["dashboard.view", "users.read", "students.create"]
 }
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+  totalPages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
+  pagination?: PaginationMeta;
   message?: string;
   code?: string;
   error?: string;
